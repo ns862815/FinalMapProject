@@ -1,0 +1,102 @@
+<! DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" 
+      content="initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Final Project Draft 1</title>
+<style>
+  html, body, #viewDiv {
+    padding: 0;
+    margin: 0;
+    height: 100%;
+    width: 100%;
+  }
+</style>
+
+<link rel="stylesheet" href="https://js.arcgis.com/4.17/esri/css/main.css">
+<script src="https://js.arcgis.com/4.17/"></script>
+    
+    <script>
+    
+        require([
+            "esri/Map",
+            "esri/views/MapView",
+            "esri/layers/FeatureLayer",
+            "esri/symbols/SimpleFillSymbol",
+            "esri/renderers/SimpleRenderer",
+            "esri/Basemap",
+            "esri/layers/VectorTileLayer",
+            "esri/config",
+            "esri/widgets/Swipe",
+            "dojo/domReady!"
+            
+        ], function(Map, MapView, FeatureLayer, SimpleFillSymbol, SimpleRenderer, Basemap, VectorTileLayer, esriConfig, Swipe)
+               {
+            
+            var myBasemap = new Basemap({
+                baseLayers: [
+                    new VectorTileLayer({
+                        portalItem: {
+                            id: "1a0dd80de59744e683c9c0290bb8bf39"
+                        }
+                    })
+                ]
+            });
+            
+            var myMap = new Map({
+                basemap: myBasemap
+            });
+            
+            var myView = new MapView({
+                container: "viewDiv",
+                map: myMap,
+                center: [-82, 39],
+                scale: 9300000
+            });
+            
+            var OHLungCancer = new FeatureLayer({
+                portalItem: {
+                    id: "3831970a35a345719f37c3f73a420829"
+                }
+            });
+            
+            myMap.add(OHLungCancer);
+            
+            var Poverty = new FeatureLayer({
+                portalItem: {
+                    id: "5a82dcc148514774be7bb047d360896a"
+                }
+            });
+            
+            myMap.add(Poverty);
+            
+             const mySwipe = new Swipe({
+                leadingLayers: [OHLungCancer],
+                trailingLayers: [Poverty],
+                position: 20, // set widget to 20% of the screen
+                view: myView // bind the swipe to the view
+            });
+            
+            myView.ui.add(mySwipe);
+            
+             var Powerplants = new FeatureLayer({
+                portalItem: {
+                    id: "d901954f9d28496790caf383f805845b"
+                }
+            });
+            
+            myMap.add(Powerplants);
+           
+            });
+        
+        </script>
+</head>
+<body>
+ 
+
+<div id="viewDiv"> </div>
+
+
+</body>
+</html>
