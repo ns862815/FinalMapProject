@@ -1,0 +1,347 @@
+<! DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" 
+      content="initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Final Project: Cartography II</title>
+<style>
+  html, body {
+      width: 100%;
+      height: 100%;
+      background-color: black
+  }
+    #viewDiv{
+      padding: 0;
+        top: 0;
+        float: right;
+        margin: 0.25%;
+        height: 90%;
+        width: 42%;
+    }
+    #titleDiv{
+        
+        float: right;
+        height: 25px;
+        width: 42%;
+        background-color: black;
+        color: white;
+        text-align: center;
+        padding-right: 0.5%;
+        font-weight: 400;
+        font-size: 25px;
+    }
+    h2{
+        text-align: ;
+        color: white;
+        float: right
+    }
+    #header {
+        width: 100%;
+        background-color: cadetblue;
+        height: 10%;
+        text-align: center;
+        color: white;
+    }
+    #viewDiv2 {
+        float: right;
+        top: 0;
+        padding: 0;
+        margin:0.25%;
+        height: 90%;
+        width: 42%;
+    }
+ 
+    #legendDiv1{
+        float: left;
+        top: 0;
+        left: 0;
+        width: 15%;
+        height: 90%;
+        bottom: auto;
+        background-color: cadetblue;        
+    }
+    #overviewDiv {
+       position: absolute;
+        top: 100px;
+        right: 12px;
+        width: 200px;
+        height: 150px;
+        border: 4px solid white;
+        z-index:1;
+    }
+    #extentDiv {
+        border: 2px solid red;
+        position: absolute;
+        z-index: 2;
+    }
+    
+    
+</style>
+
+<link rel="stylesheet" href="https://js.arcgis.com/4.17/esri/themes/dark/main.css">
+<script src="https://js.arcgis.com/4.17/"></script>
+    
+    <script>
+    
+        require([
+            "esri/Map",
+            "esri/views/MapView",
+            "esri/layers/FeatureLayer",
+            "esri/renderers/SimpleRenderer",
+            "esri/Basemap",
+            "esri/layers/VectorTileLayer",
+            "esri/config",
+            "esri/widgets/LayerList",
+            "esri/core/watchUtils",
+            "esri/geometry/Point",
+            "dojo/dom",
+            "dojo/promise/all",
+            "dojo/domReady!"
+            
+        ], function(Map, MapView, FeatureLayer, SimpleRenderer, Basemap, VectorTileLayer, esriConfig, LayerList, watchUtils, Point, dom, all)
+               {
+            
+            var myBasemap = new Basemap({
+                baseLayers: [
+                    new VectorTileLayer({
+                        portalItem: {
+                            id: "1a0dd80de59744e683c9c0290bb8bf39"
+                        }
+                    })
+                ]
+            });
+            
+            var myMap = new Map({
+                basemap: myBasemap
+            });
+            
+            var myView = new MapView({
+                container: "viewDiv",
+                map: myMap,
+                center: [-82.86, 40.75],
+                scale: 2350000
+            });
+            
+            var Poverty = new FeatureLayer({
+                portalItem: {
+                    id: "5a82dcc148514774be7bb047d360896a"
+                }
+            });
+            
+            myMap.add(Poverty);
+                
+            
+            var myMap2 = new Map({
+                basemap: myBasemap
+            });
+            
+            var myView2 = new MapView({
+                container: "viewDiv2",
+                map: myMap2,
+                center: [-82.86, 40.75],
+                scale: 2350000
+            });
+            
+            var OHLungCancer = new FeatureLayer({
+                portalItem: {
+                    id: "3831970a35a345719f37c3f73a420829"
+                }
+            });
+            
+            myMap2.add(OHLungCancer);
+        
+            
+             var Powerplants = new FeatureLayer({
+                portalItem: {
+                    id: "23329fe2122b497aa0893a474095218c"
+                },
+                 listMode: "hide",
+            });
+            
+            myMap.add(Powerplants);
+            
+            var Powerplants2 = new FeatureLayer({
+                 portalItem: {
+                    id: "23329fe2122b497aa0893a474095218c"
+                }
+            });
+            
+            myMap2.add(Powerplants2);
+            
+            
+            const layerlist = new LayerList({
+                view: myView2,
+                container: "legendDiv1",
+                listItemCreatedFunction: function(event) {
+                    const item = event.item;
+                    if (item.layer.type !="group"){
+                        item.panel = {
+                            content: "legend",
+                            open: true
+                        };
+                    }
+                }
+            });
+            
+            
+            const layerlist2 = new LayerList({
+                view: myView, 
+                container: "legendDiv1",
+                listItemCreatedFunction: function(event) {
+                    const item = event.item;
+                    if (item.layer.type !="group"){
+                        item.panel = {
+                            content: "legend",
+                            open: true
+                        };
+                    }
+                }
+            });
+            
+        
+        var synchronizeView = function(view, others){
+            others=Array.isArray(others)? others: [others];
+            var viewpointWatchHandle;
+            var viewStationaryHandle;
+            var otherInteractHandlers;
+            var scheduleId;
+            
+            var clear = function(){
+                if (otherInteractHandlers){
+                    otherInteractHandlers.forEach(function(handle){
+                        handle.remove();
+                    });
+                }
+                viewpointWatchHandle && viewpointWatchHandle.remove();
+                viewStationaryHandle && viewStationaryHandle.remove();
+                scheduleId && clearTimeout(scheduleId);
+                otherInteractHandlers = viewpointWatchHandle=viewStationaryHandle=scheduleId=null;
+            };
+            
+            var interactWatcher = view.watch('interacting, animation', function(newValue){
+                if(!newValue){
+                    return;
+                }
+                scheduleId=setTimeout(function(){
+                    scheduleId=null;
+                    
+                    viewpointWatchHandle=view.watch('viewpoint', function(newValue){
+                        others.forEach(function(otherView){
+                            otherView.viewpoint=newValue;
+                        });
+                    });
+                },0);
+                
+                otherInteractHandlers = others.map(function(otherView){
+                    return watchUtils.watch(otherView, 'interacting,animation', function(value) {
+                        if(value){
+                            clear();
+                        }
+                    });
+                });
+                
+                viewStationaryHandle = watchUtils.whenTrue(view, 'stationary',clear);
+            });
+            return {
+                remove: function() {
+                    this.remove = function() {};
+                    clear();
+                    interactWatcher.remove();
+                }
+            }
+        };
+        
+        var synchronizeViews = function(views) {
+            var handles = 
+                views.map(function(view,idx,views) {
+                    var others = views.concat();
+                    others.splice(idx, 1);
+                    return synchronizeView(view,others);
+                });
+            return {
+                remove: function(){
+                    this.remove = function(){};
+                    handles.forEach(function(h) {
+                        h.remove();
+                    });
+                    handles = null;
+                }
+            }
+        }
+        
+        synchronizeViews([myView, myView2]);
+            
+            var overviewmap = new Map ({
+            basemap: myBasemap
+        });
+        
+        var smallview = new MapView({
+            container: "overviewDiv",
+            map: overviewmap,
+            constraints: {
+                rotationEnabled: false
+            }
+        });
+        
+        smallview.ui.components = [];
+        
+        var ExtentDiv = 
+            document.getElementById("extentDiv");
+        
+        smallview.when(function(){
+            myView.watch("extent", updateOverviewExtent);
+            smallview.watch("extent", updateOverviewExtent);
+            
+            watchUtils.when(myView, "stationary", updateoverview);
+            
+            function updateoverview(){
+                smallview.goTo({
+                    center: myView.center,
+                    scale: myView.scale * 2 * Math.max
+                    (myView.width / smallview.width,
+                    myView.height / smallview.height)
+                });
+            }
+            
+            function updateOverviewExtent() {
+                
+                var extent = myView.extent;
+                
+                var bottomLeft = smallview.toScreen(new Point ({
+                    x: extent.xmin,
+                    y: extent.ymin,
+                    spatialReference: extent.spatialReference})
+                );
+                
+                var topRight = smallview.toScreen(new Point ({
+                    x: extent.xmax,
+                    y: extent.ymax,
+                    spatialReference: extent.spatialReference}));
+                
+                ExtentDiv.style.top = topRight.y + "px";
+                ExtentDiv.style.left = bottomLeft.x + "px";
+                
+                ExtentDiv.style.height = (bottomLeft.y - topRight.y) + "px";
+                ExtentDiv.style.width = (topRight.x - bottomLeft.x) + "px";
+                
+            }
+        });
+        });
+        
+        
+        </script>
+</head>
+<body>
+
+    <div id = "header"; style="display: table; height: 15px; overflow: hidden;"><h1 style="vertical-align: middle">Fossil Fuel-burning Powerplants and Health Risk Factors in Ohio Counties</h1></div>
+    <div id = "titleDiv">Poverty Rate (percent below poverty line)</div>
+    <div id = "titleDiv">Lung Cancer Rate (per 100,000 people)</div>
+    <div id="viewDiv"></div>
+    <div id = "overviewDiv">
+    <div id = "extentDiv"></div></div>
+    <div id = "legendDiv1"></div>
+    <div id = "viewDiv2"></div>
+    
+</body>
+</html>
